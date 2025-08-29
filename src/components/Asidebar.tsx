@@ -85,6 +85,7 @@ interface SidebarProps {
 const NAV_SECTIONS: NavSection[] = [
   {
     label: "Dashboard",
+    icon: <DashboardIcon />,
     links: [
       { href: "/dashboard", label: "Dashboard", icon: <DashboardIcon /> },
     ],
@@ -100,11 +101,52 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    label: "Training",
+    icon: <UsersIcon />,
+    links: [
+      { href: "/training", label: "Training", icon: <UsersIcon /> },
+      { href: "/training-materials", label: "Training Materials", icon: <UsersIcon /> },
+    ],
+  },
+  {
+    label: "Projects",
+    icon: <UsersIcon />,
+    links: [
+      { href: "/projects", label: "All Projects", icon: <UsersIcon /> },
+      { href: "/projects/create", label: "Create Project", icon: <UsersIcon /> },
+    ],
+  },
+  {
+    label: "HR",
+    icon: <UsersIcon />,
+    links: [
+      { href: "/hr", label: "HR", icon: <UsersIcon /> },
+      { href: "/hr/policies", label: "HR Policies", icon: <UsersIcon /> },
+      { href: "/hr/reports", label: "HR Reports", icon: <UsersIcon /> },
+    ],
+  },
+  {
     label: "Departments",
     icon: <UsersIcon />,
     links: [
       { href: "/departments", label: "All Departments", icon: <UsersIcon /> },
       { href: "/roles", label: "Roles", icon: <UsersIcon /> },
+    ],
+  },
+  {
+    label: "Payroll",
+    icon: <UsersIcon />,
+    links: [
+      { href: "/payroll", label: "Payroll", icon: <UsersIcon /> },
+      { href: "/payroll/reports", label: "Payroll Reports", icon: <UsersIcon /> },
+    ],
+  },
+  {
+    label: "Settings",
+    icon: <UsersIcon />,
+    links: [
+      { href: "/profile", label: "Profile", icon: <UsersIcon /> },
+      { href: "/account", label: "Account", icon: <UsersIcon /> },
     ],
   },
   {
@@ -185,7 +227,7 @@ export default function Sidebar({
       {/* Backdrop */}
       <div
         className={clsx(
-          "fixed inset-0 z-30 bg-black/40 backdrop-blur-sm transition-opacity duration-300 md:hidden",
+          "fixed inset-0 z-30 bg-black/40 backdrop-blur-sm h-full transition-opacity duration-300 md:hidden",
           isSidebarOpen ? "opacity-100 visible" : "opacity-0 invisible"
         )}
         onClick={closeSidebar}
