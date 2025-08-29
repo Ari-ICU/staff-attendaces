@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Asidebar";
+import DarkModeToggle from "@/components/DarkModeToggle";
 import { Search, Bell, User, Settings, LogOut } from "lucide-react";
 import clsx from "clsx";
 
@@ -76,6 +77,7 @@ export default function Header() {
               Dashboard
             </Link>
           </div>
+          <DarkModeToggle />
 
           {/* Search (desktop only) */}
           <div className="hidden md:block flex-1 max-w-lg mx-8">
