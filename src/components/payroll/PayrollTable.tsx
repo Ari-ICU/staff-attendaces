@@ -137,33 +137,36 @@ export default function PayrollTable({
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm sm:text-base">
               <thead className="bg-gradient-to-r from-gray-50 to-gray-600 dark:from-gray-900 dark:to-gray-850 text-gray-900 dark:text-gray-300 uppercase tracking-wide text-xs sm:text-sm">
-                {(
-                  [
-                    "name",
-                    "role",
-                    "salary",
-                    "status",
-                    "paymentDate",
-                  ] as (keyof Payroll)[]
-                ).map((key) => (
-                  <th
-                    key={key}
-                    className="p-4 font-semibold cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 group"
-                    onClick={() => handleSort(key)}
-                  >
-                    <div className="flex items-center gap-1">
-                      {key === "paymentDate"
-                        ? "Payment Date"
-                        : key.charAt(0).toUpperCase() + key.slice(1)}
-                      <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        {sortConfig.key === key &&
-                          (sortConfig.direction === "asc" ? "↑" : "↓")}
-                      </span>
-                    </div>
-                  </th>
-                ))}
-                <th className="p-4 font-semibold">Actions</th>
+                <tr>
+                  {(
+                    [
+                      "name",
+                      "role",
+                      "salary",
+                      "status",
+                      "paymentDate",
+                    ] as (keyof Payroll)[]
+                  ).map((key) => (
+                    <th
+                      key={key}
+                      className="p-4 font-semibold cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 group"
+                      onClick={() => handleSort(key)}
+                    >
+                      <div className="flex items-center gap-1">
+                        {key === "paymentDate"
+                          ? "Payment Date"
+                          : key.charAt(0).toUpperCase() + key.slice(1)}
+                        <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          {sortConfig.key === key &&
+                            (sortConfig.direction === "asc" ? "↑" : "↓")}
+                        </span>
+                      </div>
+                    </th>
+                  ))}
+                  <th className="p-4 font-semibold">Actions</th>
+                </tr>
               </thead>
+
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {filteredPayrolls.length === 0 ? (
                   <tr>
