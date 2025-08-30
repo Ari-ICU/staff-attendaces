@@ -1,9 +1,13 @@
-import PayrollReportsTable from "@/components/payroll/PayrollReportsTable";
 
-export default function PayrollReportsPage() {
+import PayrollReport from '@/components/payroll/PayrollReport'
+import React from 'react'
+
+const page = () => {
   return (
-    <div className="container mx-auto p-6">
-      <PayrollReportsTable />
+    <div>
+    <PayrollReport/>  
     </div>
-  );
+  )
 }
+export default page
+

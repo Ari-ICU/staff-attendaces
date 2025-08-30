@@ -20,6 +20,7 @@ export default function StaffList() {
     { id: 3, name: 'Alice Johnson', department: 'Finance', role: 'Analyst', image: '/images/alice.jpg' },
     { id: 4, name: 'Bob Williams', department: 'Sales', role: 'Representative', image: '/images/bob.jpg' },
     { id: 5, name: 'Emma Brown', department: 'Marketing', role: 'Coordinator', image: '/images/emma.jpg' },
+    
   ]);
 
   const [searchTerm, setSearchTerm] = useState('');

@@ -59,18 +59,13 @@ export default function PayrollPage() {
   const hasPendingPayrolls = payrolls.some((p) => p.status === "Pending");
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-4">
-        <Button
-          onClick={runAllPayrolls}
-          className="bg-green-600  flex items-center gap-2"
-          disabled={!hasPendingPayrolls}
-        >
-          <DollarSign className="w-4 h-4" />
-          {hasPendingPayrolls ? "Run All Payrolls" : "All Paid"}
-        </Button>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <PayrollSection/>
       </div>
-      <PayrollTable payrolls={payrolls} setPayrolls={setPayrolls} />
+    
     </div>
   );
 }
+
+export default page
