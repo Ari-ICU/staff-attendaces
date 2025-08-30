@@ -1,6 +1,6 @@
 "use client";
 
-import { Dispatch, SetStateAction, useState, useMemo, lazy } from "react";
+import { Dispatch, SetStateAction, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 
 interface Payroll {

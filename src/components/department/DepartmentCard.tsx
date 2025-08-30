@@ -2,7 +2,6 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 
 // Export the Color type for reuse
 export type Color = 'blue' | 'indigo' | 'purple' | 'teal' | 'orange' | 'pink' | 'emerald';

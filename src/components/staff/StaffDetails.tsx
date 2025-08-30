@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import Image from "next/image";
+import { useEffect, useRef } from "react";
 
 interface Staff {
   id: number;
@@ -10,7 +11,13 @@ interface Staff {
   image?: string;
 }
 
-type StaffDetailKey = 'department' | 'role' | 'email' | 'phone' | 'hireDate' | 'location';
+type StaffDetailKey =
+  | "department"
+  | "role"
+  | "email"
+  | "phone"
+  | "hireDate"
+  | "location";
 
 interface StaffDetailsProps {
   staff: Staff;
@@ -22,7 +29,7 @@ export default function StaffDetails({ staff, onClose }: StaffDetailsProps) {
 
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === "Escape") onClose();
     };
 
     const focusableElements: HTMLElement[] = modalRef.current
@@ -37,7 +44,7 @@ export default function StaffDetails({ staff, onClose }: StaffDetailsProps) {
     const lastElement = focusableElements[focusableElements.length - 1];
 
     const handleTab = (event: KeyboardEvent) => {
-      if (event.key === 'Tab') {
+      if (event.key === "Tab") {
         if (event.shiftKey && document.activeElement === firstElement) {
           event.preventDefault();
           lastElement?.focus();
@@ -48,25 +55,32 @@ export default function StaffDetails({ staff, onClose }: StaffDetailsProps) {
       }
     };
 
-    window.addEventListener('keydown', handleEsc);
-    window.addEventListener('keydown', handleTab);
+    window.addEventListener("keydown", handleEsc);
+    window.addEventListener("keydown", handleTab);
     modalRef.current?.focus();
 
     return () => {
-      window.removeEventListener('keydown', handleEsc);
-      window.removeEventListener('keydown', handleTab);
+      window.removeEventListener("keydown", handleEsc);
+      window.removeEventListener("keydown", handleTab);
     };
   }, [onClose]);
 
   const staffDetails = {
     ...staff,
-    email: `${staff.name.toLowerCase().replace(/\s+/g, '.')}@company.com`,
-    phone: '+1-555-123-4567',
-    hireDate: '2023-01-15',
-    location: 'Main Office',
+    email: `${staff.name.toLowerCase().replace(/\s+/g, ".")}@company.com`,
+    phone: "+1-555-123-4567",
+    hireDate: "2023-01-15",
+    location: "Main Office",
   };
 
-  const keys: StaffDetailKey[] = ['department', 'role', 'email', 'phone', 'hireDate', 'location'];
+  const keys: StaffDetailKey[] = [
+    "department",
+    "role",
+    "email",
+    "phone",
+    "hireDate",
+    "location",
+  ];
 
   return (
     <div
@@ -87,10 +101,12 @@ export default function StaffDetails({ staff, onClose }: StaffDetailsProps) {
         <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-800 dark:to-gray-900 p-6 text-center border-b border-gray-200 dark:border-gray-700">
           <div className="relative inline-block mb-4">
             {staff.image ? (
-              <img
-                src={staff.image}
-                alt={staff.name}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-white dark:border-gray-700 shadow-lg"
+              <Image
+                src="/avatars/jane.png"
+                alt="Jane Doe"
+                width={40}
+                height={40}
+                className="rounded-full"
               />
             ) : (
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-700 border-4 border-white dark:border-gray-700 flex items-center justify-center shadow-lg">
@@ -106,7 +122,9 @@ export default function StaffDetails({ staff, onClose }: StaffDetailsProps) {
           >
             {staffDetails.name}
           </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{staffDetails.role}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+            {staffDetails.role}
+          </p>
         </div>
 
         {/* Details Body */}
@@ -114,7 +132,9 @@ export default function StaffDetails({ staff, onClose }: StaffDetailsProps) {
           {keys.map((key) => (
             <div key={key} className="flex flex-col">
               <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                {key === 'hireDate' ? 'Hire Date' : key.charAt(0).toUpperCase() + key.slice(1)}
+                {key === "hireDate"
+                  ? "Hire Date"
+                  : key.charAt(0).toUpperCase() + key.slice(1)}
               </span>
               <p className="text-gray-800 dark:text-gray-100 text-sm sm:text-base break-words">
                 {staffDetails[key]}
@@ -135,7 +155,7 @@ export default function StaffDetails({ staff, onClose }: StaffDetailsProps) {
           <button
             type="button"
             className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 shadow-md hover:shadow-lg transform hover:-translate-y-px transition-all duration-200 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            onClick={() => alert('Edit functionality not implemented')}
+            onClick={() => alert("Edit functionality not implemented")}
           >
             Edit
           </button>

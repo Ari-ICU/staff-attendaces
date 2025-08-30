@@ -1,9 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useMemo, lazy, Suspense } from 'react';
 
 // Lazy load StaffDetails modal
-const StaffDetails = lazy(() => import('@/components/staff/StaffDetails'));
+const StaffDetails = lazy(() => import("@/components/staff/StaffDetails"));
 
 interface Staff {
   id: number;
@@ -168,10 +169,12 @@ export default function StaffList() {
                     >
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <img
+                          <Image
                             src={staff.image}
                             alt={staff.name}
                             className="w-10 h-10 rounded-full object-cover border-2 border-gray-100 dark:border-gray-700"
+                            width={40}
+                            height={40}
                           />
                           <div>
                             <p className="font-medium text-gray-900 dark:text-gray-100">{staff.name}</p>
@@ -213,9 +216,11 @@ export default function StaffList() {
                 className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-800 transition-all duration-200 hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-900"
               >
                 <div className="flex items-center gap-3 mb-4">
-                  <img
+                  <Image
                     src={staff.image}
                     alt={staff.name}
+                    width={48}
+                    height={48}
                     className="w-12 h-12 rounded-full object-cover border-2 border-gray-100 dark:border-gray-700"
                   />
                   <div className="flex-1">

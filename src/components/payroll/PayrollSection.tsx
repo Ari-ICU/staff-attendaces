@@ -1,4 +1,6 @@
 "use client";
+
+import Image from "next/image";
 import React, { createContext, useContext, useState, useMemo } from 'react';
 import { Search, AlertCircle } from 'lucide-react';
 
@@ -28,6 +30,14 @@ interface ProcessedEmployee extends Employee {
   medicare: number;
   overtimeHours: number;
   regularHours: number;
+}
+
+// Payroll interface to replace `any`
+interface Payroll {
+  id: string;
+  period: string;
+  runDate: string;
+  employees: ProcessedEmployee[];
 }
 
 // Context for sharing staff data with auto-refresh capabilities
@@ -148,7 +158,7 @@ function PayrollSection() {
     setEmployees(employeeData);
   }, [staffData]);
   
-  const [payroll, setPayroll] = useState<any>(null);
+  const [payroll, setPayroll] = useState<Payroll | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -278,7 +288,7 @@ function PayrollSection() {
 
     const processedEmployees = employees.map(calculatePayroll);
 
-    const payrollData = {
+    const payrollData: Payroll = {
       id: `PAY${Date.now().toString().slice(-6)}_${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
       period,
       runDate: currentDate,
@@ -292,7 +302,7 @@ function PayrollSection() {
       
       // Also save to persistent history
       const existingHistory = localStorage.getItem('payrollReportsHistory');
-      let history = [];
+      let history: Payroll[] = [];
       if (existingHistory) {
         try {
           history = JSON.parse(existingHistory);
@@ -429,7 +439,7 @@ function PayrollSection() {
                     <div className="md:col-span-2">
                       <div className="flex items-center space-x-3">
                         {staffMember?.image ? (
-                          <img
+                          <Image
                             src={staffMember.image}
                             alt={emp.name}
                             className="w-10 h-10 rounded-full object-cover border-2 border-gray-100"
@@ -440,6 +450,8 @@ function PayrollSection() {
                               const fallback = target.nextElementSibling as HTMLElement;
                               if (fallback) fallback.style.display = 'flex';
                             }}
+                            width={40}
+                            height={40}
                           />
                         ) : null}
                         <div 
@@ -596,4 +608,3 @@ function App() {
 }
 
 export default App;
-

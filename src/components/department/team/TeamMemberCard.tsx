@@ -1,5 +1,5 @@
 'use client';
-
+import Image from "next/image";
 interface TeamMember {
   id: number;
   name: string;
@@ -17,10 +17,12 @@ export default function TeamMemberCard({ member }: TeamMemberCardProps) {
       {/* Avatar */}
       <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center mb-3">
         {member.avatar ? (
-          <img
+          <Image
             src={member.avatar}
             alt={member.name}
             className="w-full h-full object-cover"
+            width={80}
+            height={80}
           />
         ) : (
           <span className="text-gray-500 dark:text-gray-300 font-bold text-lg">

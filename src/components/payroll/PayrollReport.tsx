@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
-import { format, parseISO, isWithinInterval, isValid, parse } from 'date-fns';
-import * as XLSX from 'xlsx';
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import Link from "next/link";
+import { format, parse, isWithinInterval, isValid, parseISO } from "date-fns";
+import * as XLSX from "xlsx";
 
 interface ReportData {
   id: string;
@@ -19,6 +19,30 @@ interface ReportData {
 }
 
 interface Employee {
+  id: string;
+  name: string;
+  department: string;
+  hourlyRate: number;
+  hoursWorked: number;
+  gross: number;
+  tax: number;
+  net: number;
+  federalTax: number;
+  stateTax: number;
+  socialSecurity: number;
+  medicare: number;
+  overtimeHours: number;
+  regularHours: number;
+}
+
+interface StoredPayrollData {
+  id?: string;
+  period: string;
+  runDate: string;
+  employees: StoredEmployee[];
+}
+
+interface StoredEmployee {
   id: string;
   name: string;
   department: string;
@@ -53,20 +77,22 @@ interface SummaryCardProps {
   title: string;
   value: string;
   icon: string;
-  color?: 'blue' | 'green' | 'yellow' | 'purple' | 'gray';
+  color?: "blue" | "green" | "yellow" | "purple" | "gray";
 }
 
-function SummaryCard({ title, value, icon, color = 'gray' }: SummaryCardProps) {
+function SummaryCard({ title, value, icon, color = "gray" }: SummaryCardProps) {
   const colorClasses = {
-    blue: 'bg-blue-50 border-blue-200 text-blue-800',
-    green: 'bg-green-50 border-green-200 text-green-800',
-    yellow: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-    purple: 'bg-purple-50 border-purple-200 text-purple-800',
-    gray: 'bg-gray-50 border-gray-200 text-gray-800',
+    blue: "bg-blue-50 border-blue-200 text-blue-800",
+    green: "bg-green-50 border-green-200 text-green-800",
+    yellow: "bg-yellow-50 border-yellow-200 text-yellow-800",
+    purple: "bg-purple-50 border-purple-200 text-purple-800",
+    gray: "bg-gray-50 border-gray-200 text-gray-800",
   };
 
   return (
-    <div className={`p-4 sm:p-6 rounded-2xl shadow border-2 ${colorClasses[color]} transition-transform hover:scale-[1.02]`}>
+    <div
+      className={`p-4 sm:p-6 rounded-2xl shadow border-2 ${colorClasses[color]} transition-transform hover:scale-[1.02]`}
+    >
       <div className="flex items-center justify-between mb-2">
         <span className="text-xl sm:text-2xl">{icon}</span>
         <div className="text-right">
@@ -80,8 +106,8 @@ function SummaryCard({ title, value, icon, color = 'gray' }: SummaryCardProps) {
 
 export default function PayrollReport() {
   const [reportData, setReportData] = useState<ReportData[]>([]);
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('all');
-  const [dateRange, setDateRange] = useState<DateRange>({ start: '', end: '' });
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<DateRange>({ start: "", end: "" });
   const [newPayrollAdded, setNewPayrollAdded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -89,65 +115,81 @@ export default function PayrollReport() {
 
   // Custom date parsing function with better error handling
   const parseDate = (dateStr: string): Date => {
-    if (!dateStr) return new Date('Invalid Date');
-    
+    if (!dateStr) return new Date("Invalid Date");
+
     try {
-      const isoDate = parseISO(dateStr);
-      if (isValid(isoDate)) return isoDate;
-      
-      const parsedDate = parse(dateStr, 'MMMM dd, yyyy', new Date());
-      if (isValid(parsedDate)) return parsedDate;
-      
-      // Try other common date formats
-      const altFormats = [
-        'yyyy-MM-dd',
-        'MM/dd/yyyy',
-        'dd/MM/yyyy'
+      const formats = [
+        "yyyy-MM-dd'T'HH:mm:ss.SSSxxx",
+        "yyyy-MM-dd",
+        "MM/dd/yyyy",
+        "dd/MM/yyyy",
+        "MMMM dd, yyyy",
       ];
-      
-      for (const formatStr of altFormats) {
-        const testDate = parse(dateStr, formatStr, new Date());
-        if (isValid(testDate)) return testDate;
+
+      for (const fmt of formats) {
+        const parsed = parse(dateStr, fmt, new Date());
+        if (isValid(parsed)) return parsed;
       }
-    } catch (error) {
-      console.warn('Date parsing error:', error);
+    } catch (err) {
+      console.warn("Date parsing error:", err);
     }
-    
-    return new Date('Invalid Date');
+
+    return new Date("Invalid Date");
   };
 
   // Function to load and process payroll data
-  const loadPayrollData = () => {
+  const loadPayrollData = useCallback(() => {
     try {
-      // Load existing reports from persistent storage
-      const existingReports = localStorage.getItem('payrollReportsHistory');
+      const existingReports = localStorage.getItem("payrollReportsHistory");
       let reports: ReportData[] = [];
-      
+
       if (existingReports) {
-        const parsedReports = JSON.parse(existingReports);
-        reports = parsedReports.map((payrollData: any, index: number) => {
+        const parsedReports: StoredPayrollData[] = JSON.parse(existingReports);
+        if (!Array.isArray(parsedReports)) {
+          throw new Error("Invalid payroll reports history format");
+        }
+
+        reports = parsedReports.map((payrollData: StoredPayrollData, index: number) => {
           const parsedRunDate = parseDate(payrollData.runDate);
-          const uniqueId = payrollData.id || `PAY${Date.now().toString().slice(-6)}_${index}`;
-          
+          const uniqueId =
+            payrollData.id || `PAY${Date.now().toString().slice(-6)}_${index}`;
+
           return {
             id: uniqueId,
             period: payrollData.period,
-            date: isValid(parsedRunDate) ? format(parsedRunDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+            date: isValid(parsedRunDate)
+              ? format(parsedRunDate, "yyyy-MM-dd")
+              : format(new Date(), "yyyy-MM-dd"),
             totalEmployees: payrollData.employees?.length || 0,
-            totalHours: payrollData.employees?.reduce((sum: number, emp: any) => sum + (Number(emp.hoursWorked) || 0), 0) || 0,
-            totalGross: payrollData.employees?.reduce((sum: number, emp: any) => sum + (Number(emp.gross) || 0), 0) || 0,
-            totalTax: payrollData.employees?.reduce((sum: number, emp: any) => sum + (Number(emp.tax) || 0), 0) || 0,
-            totalNet: payrollData.employees?.reduce((sum: number, emp: any) => sum + (Number(emp.net) || 0), 0) || 0,
-            status: 'Completed',
+            totalHours:
+              payrollData.employees?.reduce(
+                (sum: number, emp: StoredEmployee) => sum + (Number(emp.hoursWorked) || 0),
+                0
+              ) || 0,
+            totalGross:
+              payrollData.employees?.reduce(
+                (sum: number, emp: StoredEmployee) => sum + (Number(emp.gross) || 0),
+                0
+              ) || 0,
+            totalTax:
+              payrollData.employees?.reduce(
+                (sum: number, emp: StoredEmployee) => sum + (Number(emp.tax) || 0),
+                0
+              ) || 0,
+            totalNet:
+              payrollData.employees?.reduce(
+                (sum: number, emp: StoredEmployee) => sum + (Number(emp.net) || 0),
+                0
+              ) || 0,
+            status: "Completed",
             employees: payrollData.employees || [],
           };
         });
       }
 
-      // Check for new payroll data
-      const latestPayrollData = localStorage.getItem('latestPayrollData');
+      const latestPayrollData = localStorage.getItem("latestPayrollData");
       if (latestPayrollData) {
-        const payrollData = JSON.parse(latestPayrollData);
+        const payrollData: StoredPayrollData = JSON.parse(latestPayrollData);
         if (
           payrollData?.period &&
           payrollData?.runDate &&
@@ -155,62 +197,70 @@ export default function PayrollReport() {
         ) {
           const parsedRunDate = parseDate(payrollData.runDate);
           if (isValid(parsedRunDate)) {
-            const uniqueId = `PAY${Date.now().toString().slice(-6)}_${Math.random().toString(36).substr(2, 3).toUpperCase()}`;
+            const uniqueId = `PAY${Date.now()
+              .toString()
+              .slice(-6)}_${Math.random()
+              .toString(36)
+              .substr(2, 3)
+              .toUpperCase()}`;
 
             const newReport: ReportData = {
               id: uniqueId,
               period: payrollData.period,
-              date: format(parsedRunDate, 'yyyy-MM-dd'),
+              date: format(parsedRunDate, "yyyy-MM-dd"),
               totalEmployees: payrollData.employees.length,
               totalHours: payrollData.employees.reduce(
-                (sum: number, emp: any) => sum + (Number(emp.hoursWorked) || 0),
+                (sum: number, emp: StoredEmployee) => sum + (Number(emp.hoursWorked) || 0),
                 0
               ),
               totalGross: payrollData.employees.reduce(
-                (sum: number, emp: any) => sum + (Number(emp.gross) || 0),
+                (sum: number, emp: StoredEmployee) => sum + (Number(emp.gross) || 0),
                 0
               ),
               totalTax: payrollData.employees.reduce(
-                (sum: number, emp: any) => sum + (Number(emp.tax) || 0),
+                (sum: number, emp: StoredEmployee) => sum + (Number(emp.tax) || 0),
                 0
               ),
               totalNet: payrollData.employees.reduce(
-                (sum: number, emp: any) => sum + (Number(emp.net) || 0),
+                (sum: number, emp: StoredEmployee) => sum + (Number(emp.net) || 0),
                 0
               ),
-              status: 'Completed',
+              status: "Completed",
               employees: payrollData.employees,
             };
 
-            // Check if this exact report already exists to avoid duplicates
-            const exists = reports.some((report) => 
-              report.period === newReport.period && 
-              Math.abs(parseDate(report.date).getTime() - parseDate(newReport.date).getTime()) < 60000 && // within 1 minute
-              report.totalGross === newReport.totalGross &&
-              report.totalEmployees === newReport.totalEmployees
+            const exists = reports.some(
+              (report) =>
+                report.period === newReport.period &&
+                Math.abs(
+                  parseDate(report.date).getTime() -
+                    parseDate(newReport.date).getTime()
+                ) < 60000 &&
+                report.totalGross === newReport.totalGross &&
+                report.totalEmployees === newReport.totalEmployees
             );
-            
+
             if (!exists) {
               reports = [newReport, ...reports];
               setNewPayrollAdded(true);
-              
-              // Update persistent storage with the new report
-              const updatedPayrollHistory = reports.map(report => ({
+
+              const updatedPayrollHistory = reports.map((report) => ({
                 id: report.id,
                 period: report.period,
                 runDate: report.date,
-                employees: report.employees || []
+                employees: report.employees || [],
               }));
-              localStorage.setItem('payrollReportsHistory', JSON.stringify(updatedPayrollHistory));
-              
-              // Clean up the latest payroll data after processing
-              localStorage.removeItem('latestPayrollData');
+              localStorage.setItem(
+                "payrollReportsHistory",
+                JSON.stringify(updatedPayrollHistory)
+              );
+
+              localStorage.removeItem("latestPayrollData");
             }
           }
         }
       }
 
-      // Sort reports by date (newest first)
       const sortedReports = reports.sort((a, b) => {
         const dateA = parseDate(a.date);
         const dateB = parseDate(b.date);
@@ -219,10 +269,10 @@ export default function PayrollReport() {
 
       setReportData(sortedReports);
     } catch (err) {
-      console.error('Error loading payroll data:', err);
-      setError('Failed to load payroll data. Please try again.');
+      console.error("Error loading payroll data:", err);
+      setError("Failed to load payroll data. Please try again.");
     }
-  };
+  }, [setReportData, setNewPayrollAdded, setError]);
 
   // Validate date range
   useEffect(() => {
@@ -230,7 +280,7 @@ export default function PayrollReport() {
       const start = parseISO(dateRange.start);
       const end = parseISO(dateRange.end);
       if (isValid(start) && isValid(end) && start > end) {
-        setError('End date must be after start date.');
+        setError("End date must be after start date.");
       } else {
         setError(null);
       }
@@ -240,31 +290,27 @@ export default function PayrollReport() {
   // Load data on mount and set up polling for updates
   useEffect(() => {
     loadPayrollData();
-    
-    // Poll for updates every 2 seconds to catch new payroll processing
     const interval = setInterval(() => {
-      const latestPayrollData = localStorage.getItem('latestPayrollData');
+      const latestPayrollData = localStorage.getItem("latestPayrollData");
       if (latestPayrollData) {
         loadPayrollData();
       }
     }, 2000);
-    
     return () => clearInterval(interval);
-  }, []);
+  }, [loadPayrollData]);
 
   // Listen for localStorage changes from other tabs/windows
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'latestPayrollData' && e.newValue) {
+      if (e.key === "latestPayrollData" && e.newValue) {
         loadPayrollData();
       }
     };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [loadPayrollData]);
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  // Export to Excel (modified to support single report export)
+  // Export to Excel
   const exportToExcel = (reportId?: string) => {
     const reportsToExport = reportId
       ? filteredReports.filter((report) => report.id === reportId)
@@ -272,34 +318,34 @@ export default function PayrollReport() {
 
     const worksheetData = reportsToExport.flatMap((report) => {
       const reportSummary = {
-        'Payroll ID': report.id,
-        'Period': report.period,
-        'Date': isValid(parseDate(report.date))
-          ? format(parseDate(report.date), 'MMMM dd, yyyy')
-          : 'Invalid Date',
-        'Total Employees': report.totalEmployees,
-        'Total Hours': report.totalHours,
-        'Total Gross Pay': report.totalGross.toFixed(2),
-        'Total Deductions': report.totalTax.toFixed(2),
-        'Total Net Pay': report.totalNet.toFixed(2),
-        'Status': report.status,
+        "Payroll ID": report.id,
+        Period: report.period,
+        Date: isValid(parseDate(report.date))
+          ? format(parseDate(report.date), "MMMM dd, yyyy")
+          : "Invalid Date",
+        "Total Employees": report.totalEmployees,
+        "Total Hours": report.totalHours,
+        "Total Gross Pay": report.totalGross.toFixed(2),
+        "Total Deductions": report.totalTax.toFixed(2),
+        "Total Net Pay": report.totalNet.toFixed(2),
+        Status: report.status,
       };
 
       const employeeRows = (report.employees || []).map((emp: Employee) => ({
-        'Payroll ID': report.id,
-        'Employee ID': emp.id,
-        'Employee Name': emp.name,
-        'Department': emp.department,
-        'Regular Hours': emp.regularHours,
-        'Overtime Hours': emp.overtimeHours,
-        'Hourly Rate': emp.hourlyRate.toFixed(2),
-        'Gross Pay': emp.gross.toFixed(2),
-        'Federal Tax': emp.federalTax.toFixed(2),
-        'State Tax': emp.stateTax.toFixed(2),
-        'Social Security': emp.socialSecurity.toFixed(2),
-        'Medicare': emp.medicare.toFixed(2),
-        'Total Deductions': emp.tax.toFixed(2),
-        'Net Pay': emp.net.toFixed(2),
+        "Payroll ID": report.id,
+        "Employee ID": emp.id,
+        "Employee Name": emp.name,
+        Department: emp.department,
+        "Regular Hours": emp.regularHours,
+        "Overtime Hours": emp.overtimeHours,
+        "Hourly Rate": emp.hourlyRate.toFixed(2),
+        "Gross Pay": emp.gross.toFixed(2),
+        "Federal Tax": emp.federalTax.toFixed(2),
+        "State Tax": emp.stateTax.toFixed(2),
+        "Social Security": emp.socialSecurity.toFixed(2),
+        Medicare: emp.medicare.toFixed(2),
+        "Total Deductions": emp.tax.toFixed(2),
+        "Net Pay": emp.net.toFixed(2),
       }));
 
       return [reportSummary, ...employeeRows];
@@ -307,28 +353,28 @@ export default function PayrollReport() {
 
     const ws = XLSX.utils.json_to_sheet(worksheetData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Payroll Report');
+    XLSX.utils.book_append_sheet(wb, ws, "Payroll Report");
     XLSX.writeFile(
       wb,
-      `Payroll_Report_${reportId || format(new Date(), 'yyyy-MM-dd')}.xlsx`
+      `Payroll_Report_${reportId || format(new Date(), "yyyy-MM-dd")}.xlsx`
     );
   };
 
   // Delete report function
   const deleteReport = (reportId: string) => {
-    if (confirm('Are you sure you want to delete this payroll report?')) {
-      setReportData(prev => {
-        const updatedReports = prev.filter(report => report.id !== reportId);
-        
-        // Update persistent storage
-        const updatedPayrollHistory = updatedReports.map(report => ({
+    if (confirm("Are you sure you want to delete this payroll report?")) {
+      setReportData((prev) => {
+        const updatedReports = prev.filter((report) => report.id !== reportId);
+        const updatedPayrollHistory = updatedReports.map((report) => ({
           id: report.id,
           period: report.period,
           runDate: report.date,
-          employees: report.employees || []
+          employees: report.employees || [],
         }));
-        localStorage.setItem('payrollReportsHistory', JSON.stringify(updatedPayrollHistory));
-        
+        localStorage.setItem(
+          "payrollReportsHistory",
+          JSON.stringify(updatedPayrollHistory)
+        );
         return updatedReports;
       });
     }
@@ -336,10 +382,14 @@ export default function PayrollReport() {
 
   // Clear all reports function
   const clearAllReports = () => {
-    if (confirm('Are you sure you want to delete ALL payroll reports? This action cannot be undone.')) {
+    if (
+      confirm(
+        "Are you sure you want to delete ALL payroll reports? This action cannot be undone."
+      )
+    ) {
       setReportData([]);
-      localStorage.removeItem('payrollReportsHistory');
-      localStorage.removeItem('latestPayrollData');
+      localStorage.removeItem("payrollReportsHistory");
+      localStorage.removeItem("latestPayrollData");
     }
   };
 
@@ -347,8 +397,8 @@ export default function PayrollReport() {
   const filteredReports = useMemo(() => {
     let filtered = reportData;
 
-    if (selectedPeriod !== 'all') {
-      filtered = filtered.filter((report) => 
+    if (selectedPeriod !== "all") {
+      filtered = filtered.filter((report) =>
         report.period.toLowerCase().includes(selectedPeriod.toLowerCase())
       );
     }
@@ -359,10 +409,17 @@ export default function PayrollReport() {
           const reportDate = parseDate(report.date);
           const startDate = parseISO(dateRange.start);
           const endDate = parseISO(dateRange.end);
-          if (!isValid(reportDate) || !isValid(startDate) || !isValid(endDate)) {
+          if (
+            !isValid(reportDate) ||
+            !isValid(startDate) ||
+            !isValid(endDate)
+          ) {
             return false;
           }
-          return isWithinInterval(reportDate, { start: startDate, end: endDate });
+          return isWithinInterval(reportDate, {
+            start: startDate,
+            end: endDate,
+          });
         } catch {
           return false;
         }
@@ -406,17 +463,19 @@ export default function PayrollReport() {
 
   // Get unique periods for filter dropdown
   const uniquePeriods = useMemo(() => {
-    const periods = [...new Set(reportData.map((report) => {
-      // Extract just the date part (before the time) for filtering
-      const datePart = report.period.split(' - ')[0];
-      return datePart;
-    }))].sort();
+    const periods = [
+      ...new Set(
+        reportData.map((report) => {
+          const datePart = report.period.split(" - ")[0];
+          return datePart;
+        })
+      ),
+    ].sort();
     return periods;
   }, [reportData]);
 
   return (
     <div className="min-h-screen p-4 sm:p-8 bg-gray-50 space-y-6">
-      {/* Error Message */}
       {error && (
         <div className="bg-red-100 border-l-4 border-red-500 text-red-800 p-4 rounded-r-xl shadow-md">
           <div className="flex items-center justify-between">
@@ -431,7 +490,6 @@ export default function PayrollReport() {
         </div>
       )}
 
-      {/* Header */}
       <div className="text-center py-6">
         <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
           Payroll Reports
@@ -463,7 +521,6 @@ export default function PayrollReport() {
         </div>
       </div>
 
-      {/* New Payroll Alert */}
       {newPayrollAdded && (
         <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-800 p-4 rounded-r-xl shadow-md">
           <div className="flex items-center justify-between">
@@ -478,7 +535,6 @@ export default function PayrollReport() {
         </div>
       )}
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard
           title="Total Reports"
@@ -506,7 +562,6 @@ export default function PayrollReport() {
         />
       </div>
 
-      {/* Filters */}
       <div className="bg-white rounded-2xl shadow-lg p-6">
         <h2 className="text-2xl font-semibold mb-4 text-gray-900">
           Report Filters
@@ -559,8 +614,8 @@ export default function PayrollReport() {
         <div className="flex justify-end mt-4">
           <button
             onClick={() => {
-              setSelectedPeriod('all');
-              setDateRange({ start: '', end: '' });
+              setSelectedPeriod("all");
+              setDateRange({ start: "", end: "" });
               setCurrentPage(1);
             }}
             className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
@@ -570,10 +625,11 @@ export default function PayrollReport() {
         </div>
       </div>
 
-      {/* Reports Table */}
       <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Payroll History</h2>
+          <h2 className="text-xl font-semibold text-gray-900">
+            Payroll History
+          </h2>
           <p className="text-sm text-gray-600 mt-1">
             Showing {filteredReports.length} of {reportData.length} reports
           </p>
@@ -581,20 +637,22 @@ export default function PayrollReport() {
 
         {paginatedReports.length === 0 ? (
           <div className="p-6 text-center text-gray-600">
-            {reportData.length === 0 
+            {reportData.length === 0
               ? "No reports available. Process a payroll to add reports."
-              : "No reports match your current filters."
-            }
+              : "No reports match your current filters."}
           </div>
         ) : (
           <>
-            {/* Mobile Cards */}
             <div className="block sm:hidden">
               {paginatedReports.map((report, index) => (
                 <div
                   key={report.id}
                   className={`p-4 border-t ${
-                    index === 0 && newPayrollAdded ? 'bg-blue-50' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                    index === 0 && newPayrollAdded
+                      ? "bg-blue-50"
+                      : index % 2 === 0
+                      ? "bg-white"
+                      : "bg-gray-50"
                   }`}
                 >
                   <div className="flex justify-between items-center mb-3">
@@ -629,8 +687,8 @@ export default function PayrollReport() {
                   </p>
                   <p className="text-xs text-gray-600">
                     {isValid(parseDate(report.date))
-                      ? format(parseDate(report.date), 'MMMM dd, yyyy')
-                      : 'Invalid Date'}
+                      ? format(parseDate(report.date), "MMMM dd, yyyy")
+                      : "Invalid Date"}
                   </p>
                   <p className="text-xs text-gray-600">
                     Employees: {report.totalEmployees}
@@ -651,7 +709,6 @@ export default function PayrollReport() {
               ))}
             </div>
 
-            {/* Desktop Table */}
             <div className="hidden sm:block overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50">
@@ -691,10 +748,10 @@ export default function PayrollReport() {
                       key={report.id}
                       className={`border-t hover:bg-gray-50 transition-colors ${
                         index === 0 && newPayrollAdded
-                          ? 'bg-blue-50'
+                          ? "bg-blue-50"
                           : index % 2 === 0
-                          ? 'bg-white'
-                          : 'bg-gray-50'
+                          ? "bg-white"
+                          : "bg-gray-50"
                       }`}
                     >
                       <td className="p-4 font-mono text-blue-600 text-sm">
@@ -710,8 +767,8 @@ export default function PayrollReport() {
                       </td>
                       <td className="p-4 text-gray-600 text-sm">
                         {isValid(parseDate(report.date))
-                          ? format(parseDate(report.date), 'MMMM dd, yyyy')
-                          : 'Invalid Date'}
+                          ? format(parseDate(report.date), "MMMM dd, yyyy")
+                          : "Invalid Date"}
                       </td>
                       <td className="p-4 text-right text-gray-600 text-sm">
                         {report.totalEmployees}
@@ -755,7 +812,6 @@ export default function PayrollReport() {
           </>
         )}
 
-        {/* Pagination */}
         {filteredReports.length > reportsPerPage && (
           <div className="p-4 flex justify-between items-center border-t border-gray-200">
             <button
@@ -766,8 +822,11 @@ export default function PayrollReport() {
               Previous
             </button>
             <span className="text-sm text-gray-600">
-              Page {currentPage} of {Math.ceil(filteredReports.length / reportsPerPage)} 
-              ({(currentPage - 1) * reportsPerPage + 1}-{Math.min(currentPage * reportsPerPage, filteredReports.length)} of {filteredReports.length})
+              Page {currentPage} of{" "}
+              {Math.ceil(filteredReports.length / reportsPerPage)}(
+              {(currentPage - 1) * reportsPerPage + 1}-
+              {Math.min(currentPage * reportsPerPage, filteredReports.length)}{" "}
+              of {filteredReports.length})
             </span>
             <button
               onClick={() => setCurrentPage((prev) => prev + 1)}
@@ -780,34 +839,46 @@ export default function PayrollReport() {
         )}
       </div>
 
-      {/* Summary Statistics for Filtered Data */}
-      {filteredReports.length > 0 && filteredReports.length !== reportData.length && (
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Filtered Results Summary</h3>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{totals.totalReports}</div>
-              <div className="text-gray-600">Reports</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{totals.totalHours}</div>
-              <div className="text-gray-600">Hours</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-600">${totals.totalGross.toFixed(0)}</div>
-              <div className="text-gray-600">Gross</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">${totals.totalTax.toFixed(0)}</div>
-              <div className="text-gray-600">Tax</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">${totals.totalNet.toFixed(0)}</div>
-              <div className="text-gray-600">Net</div>
+      {filteredReports.length > 0 &&
+        filteredReports.length !== reportData.length && (
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Filtered Results Summary
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {totals.totalReports}
+                </div>
+                <div className="text-gray-600">Reports</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {totals.totalHours}
+                </div>
+                <div className="text-gray-600">Hours</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-600">
+                  ${totals.totalGross.toFixed(0)}
+                </div>
+                <div className="text-gray-600">Gross</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">
+                  ${totals.totalTax.toFixed(0)}
+                </div>
+                <div className="text-gray-600">Tax</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-600">
+                  ${totals.totalNet.toFixed(0)}
+                </div>
+                <div className="text-gray-600">Net</div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }
